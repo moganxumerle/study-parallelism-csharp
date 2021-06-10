@@ -7,6 +7,9 @@
         Title="ByteBank FrontOffice" Height="600" Width="525"
         WindowStartupLocation="CenterScreen">
     <DockPanel Margin="10">
+        
+        
+
         <!-- Logotipo -->
         <Image Source="/ByteBank.View;component/Assets/Logo.png"
                Height="75"
@@ -23,7 +26,12 @@
                 Click="BtnProcessar_Click">
             Fazer Processamento
         </Button>
-        
+
+        <ProgressBar Name="PgsProgresso"
+                     Minimum="0"
+                     Height="23"
+                     DockPanel.Dock="Bottom"/>
+
         <!-- Resultado -->
         <TextBlock DockPanel.Dock="Top">Resultado:</TextBlock>
         <TextBlock DockPanel.Dock="Top"
