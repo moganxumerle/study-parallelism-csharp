@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# IDE0008: Usar o tipo explícito
+dotnet_diagnostic.IDE0008.severity = silent
+
+# IDE0008: Usar o tipo explícito
+csharp_style_var_elsewhere = false

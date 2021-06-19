@@ -4,6 +4,7 @@ using ByteBank.Core.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -13,6 +14,7 @@ namespace ByteBank.View
     {
         private readonly ContaClienteRepository r_Repositorio;
         private readonly ContaClienteService r_Servico;
+        private CancellationTokenSource _cts;
 
         public MainWindow()
         {
@@ -25,33 +27,60 @@ namespace ByteBank.View
         private async void BtnProcessar_Click(object sender, RoutedEventArgs e)
         {
             BtnProcessar.IsEnabled = false;
+            _cts = new CancellationTokenSource();
 
             var contas = r_Repositorio.GetContaClientes();
             PgsProgresso.Maximum = contas.Count();
 
             LimparView();
+            BtnCancelar.IsEnabled = true;
 
-            var inicio = DateTime.Now;
+            try
+            {
+                var inicio = DateTime.Now;
 
-            var progress = new Progress<String>(str => PgsProgresso.Value++);
-            var resultado = await ConsolidarContas(contas, progress);
+                var progress = new Progress<string>(str => PgsProgresso.Value++);
+                var resultado = await ConsolidarContas(contas, progress, _cts.Token);
 
-            var fim = DateTime.Now;
-            AtualizarView(resultado, fim - inicio);
-            BtnProcessar.IsEnabled = true;
+                var fim = DateTime.Now;
+                AtualizarView(resultado, fim - inicio);
+            }
+            catch(OperationCanceledException )
+            {
+                TxtTempo.Text = "Operação cancelada pelo usuário";
+            }
+            finally
+            {
+                BtnProcessar.IsEnabled = true;
+                BtnCancelar.IsEnabled = false;
+            }
         }
 
-        private async Task<string[]> ConsolidarContas(IEnumerable<ContaCliente> contas, IProgress<string> reportadorDeProgresso)
+        private void BtnCancelar_Click(object sender, RoutedEventArgs e)
+        {
+            BtnCancelar.IsEnabled = false;
+            _cts.Cancel();
+        }
+
+        private async Task<string[]> ConsolidarContas(
+            IEnumerable<ContaCliente> contas, 
+            IProgress<string> reportadorDeProgresso,
+            CancellationToken ct)
         {
             var tasks = contas.Select(conta =>
                 Task.Factory.StartNew(() =>
                 {
-                    var resultadoConsolidado = r_Servico.ConsolidarMovimentacao(conta);
+                    ct.ThrowIfCancellationRequested();
+
+                    var resultadoConsolidado = r_Servico.ConsolidarMovimentacao(conta, ct);
 
                     reportadorDeProgresso.Report(resultadoConsolidado);
 
+                    ct.ThrowIfCancellationRequested();
+
                     return resultadoConsolidado;
-                })
+                },
+                ct)
 
             );
 
